@@ -134,33 +134,53 @@ export const afficherDemandesDeplafonnement = async(req, res) => {
 }
 
 // Admin validates deplafonnement
-export const validateDeplafonnement = async (req, res) => {
-    const { soldeMaximum, cummulTransactionMensuelle } = req.body;
-    const requestId = req.params.requestId;
-    const userId = req.userId;
-
-    // Ensure the user is an admin
-    const user = await Utilisateur.findById(userId);
-    if (user.role !== 'ADMIN') {
-        return res.status(403).json({ message: "Forbidden" });
-    }
-
+export const validerDeplafonnement = async (req, res) => {
     try {
-        const request = await Deplafonnement.findById(requestId);
-        if (!request || request.status !== 'EN_COURS') {
-            return res.status(404).json({ message: "Request not found or already processed" });
+        const { deplafonnementId } = req.params;
+
+        // Vérifier si l'ID est fourni
+        if (!deplafonnementId) {
+            return res.status(400).json({ message: "Vous n'avez pas fourni l'ID du déplafonnement" });
         }
 
-        // Update the Compte linked to the request user
-        await Compte.findOneAndUpdate(
-            { utilisateur: request.utilisateur },
-            { soldeMaximum, cummulTransactionMensuelle }
-        );
+        // Rechercher le déplafonnement par son ID
+        const deplafonnement = await Deplafonnement.findById(deplafonnementId).populate('utilisateur', '_id');
+        if (!deplafonnement) {
+            return res.status(404).json({ message: "Déplafonnement introuvable avec l'ID fourni" });
+        }
 
-        request.status = 'VALIDÉ';
-        await request.save();
-        res.status(200).json({ message: "Request validated", request });
+        // Rechercher l'utilisateur associé
+        const user = await Utilisateur.findById(deplafonnement.utilisateur._id);
+        if (!user) {
+            return res.status(404).json({ message: "Utilisateur non trouvé" });
+        }
+
+        // Vérifier si le compte est déjà déplafonné
+        if (user.deplafonner) {
+            return res.status(400).json({ message: "Ce compte a déjà été déplafonné" });
+        }
+
+        // Mettre à jour le statut de l'utilisateur pour "déplafonné"
+        user.deplafonner = true;
+        await user.save();
+
+        // Rechercher et mettre à jour le compte associé
+        const compte = await Compte.findOne({ utilisateur: deplafonnement.utilisateur._id });
+        if (!compte) {
+            return res.status(404).json({ message: "Compte non trouvé pour cet utilisateur" });
+        }
+        compte.soldeMaximum = 2000000;
+        compte.cummulTransactionMensuelle = 10000000;
+        await compte.save();
+
+        // Mettre à jour le statut de la demande de déplafonnement
+        deplafonnement.status = 'VALIDER';
+        await deplafonnement.save();
+
+        res.status(200).json({ message: "Demande de déplafonnement validée", deplafonnement });
     } catch (error) {
-        res.status(500).json({ message: "Server error", error: error.message });
+        console.error("Erreur serveur :", error);
+        res.status(500).json({ message: "Erreur interne du serveur", error: error.message });
     }
 };
+

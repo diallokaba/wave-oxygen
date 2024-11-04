@@ -57,7 +57,7 @@ export const createUser = async(req, res) => {
         if(role === "CLIENT"){
             soldeMaximum = 200000;
             cummulTransactionMensuelle = 1000000;
-        }else if(role === "AGENT"){
+        }else if(role === "AGENT" || role === "MARCHAND"){
             soldeMaximum = 20000000;
             cummulTransactionMensuelle = 120000000;
         }
