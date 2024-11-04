@@ -54,9 +54,12 @@ export const createUser = async(req, res) => {
 
         let soldeMaximum;
         let cummulTransactionMensuelle;
-        if(role !== "CLIENT"){
+        if(role === "CLIENT"){
             soldeMaximum = 200000;
-            cummulTransactionMensuelle = 500000;
+            cummulTransactionMensuelle = 1000000;
+        }else if(role === "AGENT"){
+            soldeMaximum = 20000000;
+            cummulTransactionMensuelle = 120000000;
         }
 
         const newUser = new Utilisateur({ nom, prenom, telephone, mdp: hashedPassword, role, photoProfile: photoUrl, premiereConnexion, codeDeVerification });
@@ -78,21 +81,24 @@ export const login = async (req, res) => {
         }
         const user = await Utilisateur.findOne({ telephone }).lean();
         if (!user) {
-            return res.status(401).json({ message: 'Numéro de téléphone ou mot de passe incorrect' });
-        }
-        // Vérifier si le compte est actif
-        const compte = await Compte.findOne({ utilisateur: user._id });
-        if (!compte || compte.etat !== 'ACTIF') {
-            return res.status(403).json({ message: 'Compte inactif, veuillez mettre votre code de verification' });
-        }
-        const isMatch = await bcrypt.compare(mdp.trim(), user.mdp);
-        if (!isMatch) {
-            return res.status(401).json({ message: 'Numéro de téléphone ou mot de passe incorrect' });
+            return res.status(401).json({ credentials: 'Numéro de téléphone ou mot de passe incorrect' });
         }
 
+        const isMatch = await bcrypt.compare(mdp.trim(), user.mdp);
+        if (!isMatch) {
+            return res.status(401).json({ credentials: 'Numéro de téléphone ou mot de passe incorrect' });
+        }
+        // Vérifier si le compte est actif
+
         if(user.premiereConnexion){
-            return res.status(401).json({ message: 'Vous n\'avez toujours pas validé votre compte' });
-        }   
+            return res.status(401).json({ validation: 'Vous n\'avez toujours pas validé votre compte' });
+        }
+        
+        const compte = await Compte.findOne({ utilisateur: user._id });
+        if (!compte || compte.etat !== 'ACTIF') {
+            return res.status(403).json({ bloquer: 'Compte inactif, veuillez contactez l\'admin' });
+        }
+
         const token = await generateToken(user);
 
         const {mdp: mdp_, codeDeVerification: cv_, ...userWithoutPassword} = user;
@@ -152,26 +158,35 @@ export const regenerateVerificationCode = async(req, res) => {
 }
 
 export const activeAccountWithVerificationCode = async (req, res) => {
-    let { codeDeVerification } = req.body;
 
     try {
+        let { codeDeVerification } = req.body;
         codeDeVerification = Number(codeDeVerification);
         if(!codeDeVerification){
             return res.status(400).json({ message: 'Le code de vérification est obligatoire' });
         }
 
-        const user = await Utilisateur.findOneAndUpdate({codeDeVerification }, { premiereConnexion: false, codeDeVerification: null }, { new: true }).lean();
+        const user = await Utilisateur.findOne({codeDeVerification });
 
         if (!user) {
             return res.status(400).json({ message: 'Code de vérification incorrect' });
         }
+
+        if(!user.premiereConnexion){
+            return res.status(400).json({ message: 'Vous avez déjà validé votre compte' });
+        }
+
+        user.premiereConnexion = false;
+        user.codeDeVerification = null;
+        await user.save();
 
         await Compte.findOneAndUpdate({ utilisateur: user._id }, { etat: 'ACTIF' }, { new: true });
 
         return res.status(200).json({ message: 'Compte activé avec succès', user });
     } catch (error) {
         console.log(error.message);
-        return res.status(500).json({ message: 'Erreur lors de l\'activation de votre compte', error });
+        console.log(error);
+        return res.status(500).json({ message: 'Erreur lors de l\'activation de votre compte' });
     }
 }
 

@@ -28,3 +28,22 @@ export const modifyStateAccount = async (req, res) => {
         return res.status(500).json({ message: 'Erreur lors de la mise à jour du compte', error });
     }
 };
+
+export const getCompteByConnectedUser = async(req, res) =>{
+    try{
+        const userId = req.userId;
+        if(!userId){
+            return res.status(401).json({ message: "Utilisateur non connecté" });
+        }
+        const compte = await Compte.findOne({ utilisateur: userId });
+
+        if(!compte){
+            return res.status(404).json({ message: "Compte non trouvé" });
+        }
+
+        return res.status(200).json(compte);
+    }catch(error){
+        console.log(error);
+        return res.status(500).json({ message: "Erreur lors de la récupération du compte", error });
+    }
+}

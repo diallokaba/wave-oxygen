@@ -4,8 +4,6 @@ import Compte from '../models/compte.js';
 import Transaction from '../models/transaction.js';
 import TypeTransaction from '../models/typeTransaction.js';
 import Notification from '../models/notification.js';
-import  SmsService from  '../services/SmsService.js'
-import { WebSocket } from 'socket.io-client';
 import WebSocketService from '../services/WebSocketService.js'
 class TransactionService {
     static async createNotification(userId, message, type) {

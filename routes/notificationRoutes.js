@@ -1,16 +1,12 @@
-// routes/notificationRoutes.js
 import express from 'express';
-import NotificationController from '../controllers/NotificationController.js';
 import { getToken } from '../middlewares/authMiddleware.js';
+import { getNotifications, getUnReadNotificationsCount, markNotificationAsRead } from '../controllers/notificationController.js';
 
 
-const notificationRouter = express.Router();
+const notificationRoute = express.Router();
 
-// Route pour récupérer les notifications de l'utilisateur connecté
-notificationRouter.get('/user-notifications', getToken, NotificationController.getUserNotifications);
-notificationRouter.patch('/:notificationId/read',getToken ,NotificationController.markAsRead);
-notificationRouter.patch('/read-all', getToken, NotificationController.markAllAsRead);
-// Route pour récupérer toutes les notifications
-notificationRouter.get('/all-notifications', NotificationController.getAllNotifications);
+notificationRoute.get('/all', getToken, getNotifications);
+notificationRoute.patch('/count', getToken, getUnReadNotificationsCount);
+notificationRoute.patch('/:notificationId/read', markNotificationAsRead);
 
-export default notificationRouter;
+export default notificationRoute;
