@@ -20,6 +20,16 @@ export const requestDeplafonnement = async (req, res) => {
             return res.status(404).json({ message: "Utilisateur non trouvé" });
         }
 
+        if(user.deplafonner){
+            return res.status(400).json({ message: "Votre compte a été déjà déplafonné" });
+        }
+
+        const deplafonnementEncours = await Deplafonnement.findOne({utilisateur: userId, status: 'ENCOURS'});
+
+        if(deplafonnementEncours){
+            return res.status(400).json({ message: "Vous avez deja fait une demande de déplafonnement en cours de traitement" });
+        }
+
         const io = req.app.locals.io; // Récupère io depuis app.locals
 
         if(user.role !== 'CLIENT'){
@@ -111,6 +121,17 @@ export const requestDeplafonnement = async (req, res) => {
         return res.status(500).json({ message: "Erreur lors de la demande de déplafonnement", error: error.message });
     }
 };
+
+export const afficherDemandesDeplafonnement = async(req, res) => {
+    try{
+        //filter demandes by status encours and createdDate ascending
+        const deplafonnements = await Deplafonnement.find({status: 'EN_COURS' }).populate('utilisateur', 'nom prenom photoProfile').sort({ dateCreation: 1 });
+        res.status(200).json(deplafonnements);
+    }catch(error){
+        console.log(error);
+        return res.status(500).json({ message: "Erreur lors de l'affichage des demandes de déplafonnement", error: error.message });
+    }
+}
 
 // Admin validates deplafonnement
 export const validateDeplafonnement = async (req, res) => {
