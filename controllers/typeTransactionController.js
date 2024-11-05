@@ -4,7 +4,7 @@ export const createTypeTransaction = async (req, res) => {
     try{
         const {frais, nom} = req.body;
         if(!nom){
-            return res.status(400).json({message: "Le nom obligatoire"});
+            return res.status(400).json({message: "Le nom est obligatoire"});
         }
 
         const typeTransactionExist = await TypeTransaction.findOne({nom});

@@ -7,7 +7,7 @@ const notificationSchema = new mongoose.Schema({
     date: {type: Date, default: Date.now},
     read: {type: Boolean, default: false},
     type: String,
-    idDemande: {type: String, required: true}
+    idDemande: {type: String}
 });
 
 const Notification = mongoose.model('Notification', notificationSchema);    

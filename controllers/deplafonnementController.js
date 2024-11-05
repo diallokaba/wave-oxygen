@@ -4,6 +4,7 @@ import Compte from '../models/compte.js';
 import Utilisateur from '../models/utilisateur.js';
 import Notification from '../models/notification.js';
 import cloudinary from '../utils/cloudinary.js';
+import sendNotification from '../utils/sendNotification.js';
 
 // Client requests deplafonnement
 export const requestDeplafonnement = async (req, res) => {
@@ -29,8 +30,6 @@ export const requestDeplafonnement = async (req, res) => {
         if(deplafonnementEncours){
             return res.status(400).json({ message: "Vous avez deja fait une demande de déplafonnement en cours de traitement" });
         }
-
-        const io = req.app.locals.io; // Récupère io depuis app.locals
 
         if(user.role !== 'CLIENT'){
             return res.status(403).json({ message: "Seul un client peut faire une demande de déplafonnement" });
@@ -89,18 +88,22 @@ export const requestDeplafonnement = async (req, res) => {
 
         await deplafonnement.save();
 
+        const io = req.app.locals.io; // Récupère io depuis app.locals
+
         const userAdminAndMarchand = await Utilisateur.find({ role: { $in: ['ADMIN', 'AGENT'] } });
         for(const destinataire of userAdminAndMarchand){
-            const notification = await Notification.create({
+
+            sendNotification(user, destinataire._id, 'a fait une demande de déplafonnement', "DEMANDE_DEPLAFONNMENT", deplafonnement._id, io);
+            /*const notification = await Notification.create({
                 senderId: userId,
                 receiverId: destinataire._id,
                 message: `${user.nom} ${user.prenom} a fait une demande de déplafonnement`,
                 type: "DEMANDE_DEPLAFONNMENT",
                 idDemande: deplafonnement._id
-            });
+            });*/
 
              // Envoyer la notification en temps réel si le destinataire est connecté
-            const destinataireSocketId = io.userSockets.get(destinataire._id.toString());
+            /*const destinataireSocketId = io.userSockets.get(destinataire._id.toString());
             if(destinataireSocketId){
                 const nbNotifications = await Notification.countDocuments({ 
                     receiverId: destinataire._id, 
@@ -112,7 +115,7 @@ export const requestDeplafonnement = async (req, res) => {
                     notification,
                     nbNotifications
                 });
-            }
+            }*/
         }
 
         res.status(201).json({ message: "Demande de déplafonnement envoyée avec succès", deplafonnement });

@@ -34,7 +34,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use(`${BASE_URI}/type-transaction`, typeTransactionRoute);
-app.use(`${BASE_URI}/client`, transactionClientRoute);
+app.use(`${BASE_URI}/operations`, transactionClientRoute);
 app.use(`${BASE_URI}/admin`, adminRoute);
 
 app.use(`${BASE_URI}/compte`, compteRoute);
